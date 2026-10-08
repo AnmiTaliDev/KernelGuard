@@ -6,9 +6,9 @@ from asyncio import Task, create_task, sleep
 from typing import Coroutine
 
 from ..utils.database import database
-from ..utils.helpers import check, get_permissions
+from ..utils.helpers import check, get_permissions, is_admin
 from ..utils.members import can_vote
-from ..config import ADMINS, GROUP, VOTEBAN_VOTING_HOURS, VOTEBAN_TIEBREAK_HOURS, VOTEBAN_GRACE_HOURS
+from ..config import GROUP, VOTEBAN_VOTING_HOURS, VOTEBAN_TIEBREAK_HOURS, VOTEBAN_GRACE_HOURS
 
 router = Router(name=__name__)
 
@@ -148,8 +148,8 @@ async def voteban(message: Message, bot: Bot, db: Connection):
     victim = message.reply_to_message.from_user
 
     if not await check(chat_type, chat_id, message): return
-    if not await can_vote(db, user_id): return await message.reply("You can not start a voteban yet.")
-    if victim.is_bot or victim.id == user_id or victim.id in ADMINS:
+    if not await can_vote(bot, db, user_id): return await message.reply("You can not start a voteban yet.")
+    if victim.is_bot or victim.id == user_id or await is_admin(bot, victim.id):
         return await message.reply("This user can not be voted against.")
 
     async with db.execute("SELECT message_id FROM votebans WHERE target_id = ? AND closed = 0", (victim.id,)) as cursor:
@@ -184,10 +184,10 @@ async def voteban(message: Message, bot: Bot, db: Connection):
 
 @router.message(Command("postpone"))
 @database
-async def postpone(message: Message, db: Connection):
+async def postpone(message: Message, bot: Bot, db: Connection):
     if not message.reply_to_message: return await message.reply("Try writing in reply to a message.")
     if message.from_user is None: return
-    if message.from_user.id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
+    if not await is_admin(bot, message.from_user.id): return await message.reply("Are you sure you have enough rights?")
 
     async with db.execute(
         "SELECT id, muted FROM votebans WHERE chat_id = ? AND message_id = ? AND closed = 0",
@@ -219,7 +219,7 @@ async def vote(callback: CallbackQuery, bot: Bot, db: Connection):
 
     if row is None or row[0]: return await callback.answer("Voting is closed.", show_alert=True)
     if voter_id == row[1]: return await callback.answer("You can not vote in your own voteban.", show_alert=True)
-    if not await can_vote(db, voter_id): return await callback.answer("You can not vote yet.", show_alert=True)
+    if not await can_vote(bot, db, voter_id): return await callback.answer("You can not vote yet.", show_alert=True)
 
     cursor = await db.execute(
         "INSERT OR IGNORE INTO voteban_votes (voteban_id, voter_id, vote) VALUES (?, ?, ?)",

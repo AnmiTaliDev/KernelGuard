@@ -6,7 +6,7 @@ from aiosqlite import Connection
 from ..utils.database import database
 from ..utils.helpers import *
 from ..utils.members import trust_member, untrust_member
-from ..config import GROUP, ADMINS
+from ..config import GROUP
 
 router = Router(name=__name__)
 
@@ -22,8 +22,8 @@ async def punish(message: Message, bot: Bot):
     victim_link = message.reply_to_message.from_user.mention_html()
     user_link = message.from_user.mention_html()
 
-    if user_id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
-    if victim_id in ADMINS: return await message.reply("Don't try to punish my master.")
+    if not await is_admin(bot, user_id): return await message.reply("Are you sure you have enough rights?")
+    if await is_admin(bot, victim_id): return await message.reply("Don't try to punish my master.")
     if not await check(chat_type, chat_id, message): return
     else:
         await bot.restrict_chat_member(
@@ -50,8 +50,8 @@ async def ban(message: Message, bot: Bot):
     victim_link = message.reply_to_message.from_user.mention_html()
     user_link = message.from_user.mention_html()
 
-    if user_id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
-    if victim_id in ADMINS: return await message.reply("Don't try to ban my master.")
+    if not await is_admin(bot, user_id): return await message.reply("Are you sure you have enough rights?")
+    if await is_admin(bot, victim_id): return await message.reply("Don't try to ban my master.")
     if not await check(chat_type, chat_id, message): return
     else:
         await message.chat.ban(victim_id)
@@ -73,7 +73,7 @@ async def normal(message: Message, bot: Bot):
     victim_link = message.reply_to_message.from_user.mention_html()
     user_link = message.from_user.mention_html()
 
-    if user_id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
+    if not await is_admin(bot, user_id): return await message.reply("Are you sure you have enough rights?")
     if not await check(chat_type, chat_id, message): return
     else:
         await bot.restrict_chat_member(
@@ -88,7 +88,7 @@ async def normal(message: Message, bot: Bot):
         )
 
 @router.message(Command("trust"))
-async def trust(message: Message):
+async def trust(message: Message, bot: Bot):
     if not message.reply_to_message: return await message.reply("Try writing in reply to a message.")
     if message.from_user is None or message.reply_to_message.from_user is None: return
 
@@ -99,7 +99,7 @@ async def trust(message: Message):
     victim_link = message.reply_to_message.from_user.mention_html()
     user_link = message.from_user.mention_html()
 
-    if user_id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
+    if not await is_admin(bot, user_id): return await message.reply("Are you sure you have enough rights?")
     if not await check(chat_type, chat_id, message): return
     else:
         await trust_member(victim_id)
@@ -121,7 +121,7 @@ async def unban(message: Message, bot: Bot):
     victim_link = message.reply_to_message.from_user.mention_html()
     user_link = message.from_user.mention_html()
 
-    if user_id not in ADMINS: return await message.reply("Are you sure you have enough rights?")
+    if not await is_admin(bot, user_id): return await message.reply("Are you sure you have enough rights?")
     if not await check(chat_type, chat_id, message): return
     else:
         await message.chat.unban(victim_id)
@@ -133,7 +133,7 @@ async def unban(message: Message, bot: Bot):
 
 @router.message(Command("ping"))
 @database
-async def everyone(message: Message, db: Connection):
+async def everyone(message: Message, bot: Bot, db: Connection):
     if message.from_user is None:
         return
 
@@ -141,7 +141,7 @@ async def everyone(message: Message, db: Connection):
     chat_type = message.chat.type
     user_id = message.from_user.id
 
-    if user_id not in ADMINS:
+    if not await is_admin(bot, user_id):
         return await message.reply("Are you sure you have enough rights?")
     if not await check(chat_type, chat_id, message):
         return

@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReactionTypeEmoji, TelegramObject
 
-from ..config import ADMINS, RULES_PROMPT_PATH, GROUP
+from ..config import RULES_PROMPT_PATH, GROUP
 # from ..core.ai import ai
 
 logger = logging.getLogger(__name__)

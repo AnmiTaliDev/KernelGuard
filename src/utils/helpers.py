@@ -1,5 +1,5 @@
 from aiogram import Bot
-from aiogram.enums import ChatType
+from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.types import ChatPermissions
 
 from ..config import GROUP
@@ -30,6 +30,10 @@ def get_permissions(yet: bool):
 async def change_prefix(bot: Bot, chat_id: int, user_id: int, prefix: str = "Member"):
     await bot.set_chat_member_tag(chat_id, user_id, prefix)
     return
+
+async def is_admin(bot: Bot, user_id: int) -> bool:
+    member = await bot.get_chat_member(GROUP, user_id)
+    return member.status in (ChatMemberStatus.CREATOR, ChatMemberStatus.ADMINISTRATOR)
 
 async def check(chat_type, chat_id, message):
     if chat_type != ChatType.PRIVATE and chat_id != GROUP:
